@@ -346,8 +346,6 @@ def game():
                 scoreboard.fuel -= 5
                 scoreboard.distance = scoreboard.distance + 50
 
-            scoreboard.fuel += 5
-
             #If out of fuel, give game over
             if scoreboard.fuel <= 0:
                 scoreboard.fuel = 0
