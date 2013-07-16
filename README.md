@@ -1,4 +1,4 @@
 SideScroller
 ============
 
-A sidescrolling game made in Pygame
+A sidescrolling game made in Pygame.
