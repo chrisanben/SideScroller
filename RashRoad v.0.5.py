@@ -7,15 +7,15 @@
                         in which the players car tries to avoid incoming traffic while
                         trying to score points.
                         
-    VERSION 0.4: Mechanics and Scoring
-                    - Added an input lag to the car, needs to be fixed
-                    - Added a Fuel Can, that serves as a score condition
-                    - Player car accelerates if doesn't hit, decelerates if does
-                    - Added a Life and Score system
-                    - Changed the player car for a better one
+    VERSION 0.5: Music, Sound and Animation[s]
+                    - ADDED EXPLOSION! HELL YEAH!
+                    - Added a Crash sound effect
+                    - Added an animation that plays if player hits a car
+                    - Added a randomized sound effect that plays at times
+                    - Added a looping soundtrack
     
 """
-import pygame, random, time
+import pygame, random, time, mixer
 pygame.init()
 
 screen = pygame.display.set_mode((800, 600))
@@ -29,6 +29,10 @@ class PlayerCar(pygame.sprite.Sprite):
         self.image.set_colorkey(self.transColor)
         self.rect = self.image.get_rect()
         self.acceleration = 2
+
+        pygame.mixer.init()
+        self.crash = pygame.mixer.Sound("sounds/crash.wav")
+        self.horn = pygame.mixer.Sound("sounds/horn.wav")
         
     def update(self):
         mousex, mousey = pygame.mouse.get_pos()
@@ -51,7 +55,7 @@ class PlayerCar(pygame.sprite.Sprite):
         else:
             self.acceleration = 2.0
 
-        print (mousey, self.rect.centery, self.acceleration)
+        #print (mousey, self.rect.centery, self.acceleration)
         
         if self.rect.centery > 550:
             self.rect.centery = 550
@@ -76,6 +80,9 @@ class OutCar(pygame.sprite.Sprite):
             self.rect.centery += self.dy
         if self.rect.right < 0:
             self.reset()
+
+    def getPosition(self):
+        return self.rect.centery
             
     def reset(self):
         self.dx = random.randrange(5, 6)
@@ -94,6 +101,9 @@ class InCar(pygame.sprite.Sprite):
         self.image = pygame.transform.flip(self.image, True, False)
         self.rect = self.image.get_rect()
         self.reset()
+
+    def getPosition(self):
+        return self.rect.centery
     
     def update(self):
         self.rect.centerx -= self.dx
@@ -104,6 +114,43 @@ class InCar(pygame.sprite.Sprite):
         self.dx = random.randrange(9, 10)
         self.rect.left = 800 + (random.randrange(0,20)*40)
         self.rect.centery = (random.randrange(0,3)*100) + 45
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.loadexplosion()
+        
+        self.image = pygame.image.load("images/animation/explosion (0).png")
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+        self.rect.center = (-10,-10)
+        self.frame = 0
+        self.afterHit = False
+        self.rect.centerx = 100
+
+    def update(self, yCrash):
+        self.frame += 1
+        self.rect.centery = yCrash - 40
+        if self.frame >= len(self.walkImages):
+            self.frame = 0
+            self.rect.centerx -= 1
+            self.afterHit = False
+        else:
+            self.image = self.walkImages[self.frame]
+            self.afterHit = True
+            self.rect.centerx = 100
+
+    def loadexplosion(self):
+        self.walkImages = []
+        for i in range(24):
+            imgName = "images/animation/explosion ({0}).png".format(i)
+            tmpImage = pygame.image.load(imgName)
+            tmpImage = pygame.transform.scale(tmpImage, (150, 150))
+            tmpImage = tmpImage.convert()
+            transColor = tmpImage.get_at((10, 10))
+            tmpImage.set_colorkey(transColor)
+            self.walkImages.append(tmpImage)
 
 class Gas(pygame.sprite.Sprite):
     def __init__(self):
@@ -158,8 +205,13 @@ class Scoreboard(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         
 def main():
-    pygame.display.set_caption("RoadRash v0.4")
+    pygame.display.set_caption("RoadRash v0.5")
 
+    mixer.init(44100)
+    music = mixer.Sound("sounds/soundtrack.wav")
+    music.set_volume(0.2)
+    music.play(loops=-1)
+    
     background = pygame.Surface(screen.get_size())
     background.fill((0, 0, 0))
     screen.blit(background, (0, 0))
@@ -172,10 +224,12 @@ def main():
     car4 = InCar()
     car5 = OutCar()
     gas = Gas()
+    explosion = Explosion()
     road = Road()
     scoreboard = Scoreboard()
 
     gameSprites = pygame.sprite.OrderedUpdates(road, gas)
+    explosionSprite = pygame.sprite.Group(explosion)
     playerSprite = pygame.sprite.Group(pcar)
     carSprites = pygame.sprite.Group(car1, car2, car3, car4, car5)
     scoreSprite = pygame.sprite.Group(scoreboard)
@@ -200,7 +254,6 @@ def main():
                 scoreboard.fuel -= 4
             else:
                 scoreboard.fuel -= 5
-            
             scoreboard.time = 0
             scoreboard.distance = scoreboard.distance + 10
             scoreSprite.update()
@@ -211,11 +264,16 @@ def main():
                 gamespeed = gamespeed * 1.02
                 if gamespeed > 60:
                     gamespeed = 60
-                
             else:
                 gamespeed = gamespeed * 1.01
 
-            print int(gamespeed)
+            #print int(gamespeed)
+
+            soundchance1 = random.randrange(0,25)
+            soundchance2 = random.randrange(0,25)
+
+            if soundchance1 == soundchance2 and gamespeed > 60:
+                pcar.horn.play()
 
         pygame.mouse.set_visible(False)
 
@@ -227,24 +285,32 @@ def main():
         hitCar = pygame.sprite.spritecollide(pcar, carSprites, False)
         if hitCar:
             for carHit in hitCar:
+                pcar.crash.play()
+                yCrash = carHit.getPosition()
                 carHit.reset()
                 gamespeed = 30
                 scoreboard.lives -= 1
+                
                 if scoreboard.lives <= 0:
                     print("Game over!")
                     scoreboard.lives = 5
                     scoreboard.fuel = 100
+                    
         if pcar.rect.colliderect(gas.rect):
             gas.reset()
             scoreboard.fuel += 10
             if scoreboard.fuel > 100:
                 scoreboard.fuel = 100
-
+                
         gameSprites.update()
         gameSprites.draw(screen)
 
         playerSprite.update()
         playerSprite.draw(screen)
+
+        if hitCar or explosion.afterHit:
+            explosionSprite.update(yCrash)
+            explosionSprite.draw(screen)
 
         scoreSprite.update()
         scoreSprite.draw(screen)
