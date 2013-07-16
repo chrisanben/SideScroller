@@ -1,7 +1,7 @@
 # Source File Name: RashRoad.py
 # Author's Name: Chris Bentley
 # Last Modified By: Chris Bentley
-# Date Last Modified: July 08, 2013
+# Date Last Modified: July 15, 2013
 """ 
     PROGRAM DESCRIPTION: It is a Python game using the Pygame engine
                         in which the players car tries to avoid incoming traffic while
@@ -246,16 +246,20 @@ def main():
         if scoreboard.time > 0.33:
             if gamespeed < 100:
                 scoreboard.fuel -= 1
+                scoreboard.distance = scoreboard.distance + 10
             elif gamespeed < 150:
                 scoreboard.fuel -= 2
+                scoreboard.distance = scoreboard.distance + 20
             elif gamespeed < 225:
                 scoreboard.fuel -= 3
+                scoreboard.distance = scoreboard.distance + 30
             elif gamespeed < 300:
                 scoreboard.fuel -= 4
+                scoreboard.distance = scoreboard.distance + 40
             else:
                 scoreboard.fuel -= 5
+                scoreboard.distance = scoreboard.distance + 50
             scoreboard.time = 0
-            scoreboard.distance = scoreboard.distance + 10
             scoreSprite.update()
 
         if addedtime > 5 or gamespeed < 60:
