@@ -7,12 +7,9 @@
                         in which the players car tries to avoid incoming traffic while
                         trying to score points.
                         
-    VERSION 1.0: Release and added Stuff
-                    - Changed intro graphics, now it's a bit more appealing
-                    - Same with scoreboard
-                    - Made gas cans have a sound
-                    - Gave the car a engine loop sound
-    
+    VERSION 1.1: Car Types!
+                    - Added ability to switch cars to 2 other cars
+                    - Mouse acceleration setting didn't actually work, so now it does
 """
 import pygame, random, time, mixer
 pygame.init()
@@ -25,7 +22,7 @@ class PlayerCar(pygame.sprite.Sprite):
     def __init__(self):
         #Set variables for Player Car
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("images/pcar.png")
+        self.image = pygame.image.load("images/pcar (0).png")
         self.image = self.image.convert()
         self.transColor = self.image.get_at((1, 1))
         self.image.set_colorkey(self.transColor)
@@ -50,7 +47,16 @@ class PlayerCar(pygame.sprite.Sprite):
     def getPosition(self):
         #Return Y position
         return self.rect.centery
-        
+
+    def switchCars(self, carNum):
+        #Based on car number given, it will draw a specific car
+        for index in range(3):
+            if index == carNum:
+                self.image = pygame.image.load("images/pcar ({0}).png".format(index))
+        self.image = self.image.convert()
+        self.transColor = self.image.get_at((1, 1))
+        self.image.set_colorkey(self.transColor)
+            
     def update(self):
         #Get mouse x,y coordinates and the difference from previous coordinates
         mousex, mousey = pygame.mouse.get_pos()
@@ -311,12 +317,13 @@ class Logo(pygame.sprite.Sprite):
         self.rect.center = 400, 75
 
 #The engine of the game, this is the game. This has all of the components inside, all of the checking. ALL!
-def game():
+def game(carNum, mouseA):
     #Set initial setting on the screen
-    pygame.display.set_caption("RoadRash v1.0")
+    pygame.display.set_caption("RoadRash v1.1")
     background = pygame.Surface(screen.get_size())
     background.fill((0, 0, 0))
     screen.blit(background, (0, 0))
+    carType = carNum
 
     #Construct all the needed classes (Sadly, I forgot to change this to a more line friendly format)
     pcar = PlayerCar()
@@ -324,6 +331,15 @@ def game():
     explosion = Explosion()
     road = Road()
     scoreboard = Scoreboard()
+
+    #Switch cars if set to a different car
+    pcar.switchCars(carType)
+
+    #Set acceleration for game based on setting
+    if mouseA:
+        pcar.mouseAcceleration = True
+    else:
+        pcar.mouseAcceleration = False
 
     cars = []
     for index in range(6):
@@ -348,7 +364,6 @@ def game():
     addedtime = 0   #Total time played
     gamespeed = 45  #Clock speed
     carspeed = 0    #The speed of the car
-
     
     pcar.engine.play(loops=-1)
     
@@ -503,7 +518,7 @@ def game():
     return scoreboard.distance
 
 def intro(score):
-    pygame.display.set_caption("RoadRash v1.0")
+    pygame.display.set_caption("RoadRash v1.1")
 
     #This is MailPilots intro Screen stuff. Basically, the game with no win/lose conditions.
     pcar = PlayerCar()
@@ -530,17 +545,19 @@ def intro(score):
     "but be careful not to run into traffic.",
     "The car is rigged to constantly go faster.",
     "",
-    "click to start, escape to quit...",
+    "Click to start, Escape to quit...",
     "",
-    "Press a to toggle Mouse Acceleration."
+    "Press a to toggle Mouse Acceleration.",
+    "Change Cars with Up Arrow"
     )
-
     for line in instructions:
         tempLabel = insFont.render(line, 0, (0, 0, 0))
         insLabels.append(tempLabel)
 
     #Game "engine", it updates, draws and determines what happens.
+    carNum = 0
     keepGoing = True
+    mouseA = True
     clock = pygame.time.Clock()
     pygame.mouse.set_visible(False)
     while keepGoing:
@@ -557,11 +574,19 @@ def intro(score):
                     keepGoing = False
                     donePlaying = True
                 elif event.key == pygame.K_a:
-                    print pcar.mouseAcceleration
-                    if pcar.mouseAcceleration:
+                    #print pcar.mouseAcceleration
+                    if pcar.mouseAcceleration: #Sets and later sends MouseAcceleration to game
                         pcar.mouseAcceleration = False
+                        mouseA = False
                     else:
                         pcar.mouseAcceleration = True
+                        mouseA = True
+                elif event.key == pygame.K_UP: #Sets and later sends carType to game
+                    if carNum == 2:
+                        carNum = 0
+                    else:
+                        carNum += 1
+                    pcar.switchCars(carNum)
 
                 
     
@@ -576,7 +601,7 @@ def intro(score):
 
     #Set mouse visible again
     pygame.mouse.set_visible(True)
-    return donePlaying
+    return donePlaying, carNum, mouseA
 
 def main():
     #Plays soundtrack for the game
@@ -589,9 +614,9 @@ def main():
 
     #The main game loop, keeps playing the game until the player quites it
     while not donePlaying:
-        donePlaying = intro(score) #This is the first screen
+        donePlaying, carNum, mouseA = intro(score) #This is the first screen
         if not donePlaying:
-            score = game() #This is the game
+            score = game(carNum, mouseA) #This is the game
 
     
     music.stop()
